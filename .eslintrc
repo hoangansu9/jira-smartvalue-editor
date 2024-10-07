@@ -1,0 +1,16 @@
+{
+  "extends": "react-app",
+  "globals": {
+    "chrome": "readonly"
+  },
+  "overrides": [
+    {
+      "files": [
+        "build/**/*.js"
+      ],
+      "rules": {
+        "rule-name": "off"
+      }
+    }
+  ]
+}
