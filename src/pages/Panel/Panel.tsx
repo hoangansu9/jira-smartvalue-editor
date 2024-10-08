@@ -1,6 +1,6 @@
 import Editor, { EditorProps, Monaco, loader } from '@monaco-editor/react';
-import React, { useRef } from 'react';
-
+import React, { ChangeEvent, useRef, useState } from 'react';
+import './Panel.scss';
 import * as monaco from 'monaco-editor';
 import * as editorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js';
 import * as jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker.js';
@@ -9,6 +9,7 @@ import * as htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker.js';
 import * as tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker.js';
 
 import * as prettier from 'prettier/standalone';
+import * as parserBabel from 'prettier/parser-babel';
 
 self.MonacoEnvironment = {
   getWorker(_: any, label: string) {
@@ -25,51 +26,50 @@ self.MonacoEnvironment = {
       return new tsWorker();
     }
     return new editorWorker();
-  }
+  },
 };
 // loader.config({ paths: { vs: 'https://www.unpkg.com/monaco-editor/min/vs', } });
-loader.config({ paths: { vs: '/monaco-editor/min/vs', } });
-
+loader.config({ paths: { vs: '/monaco-editor/min/vs' } });
+type Lang = 'handlebars' | 'javascript';
 const Panel: React.FC = () => {
   const monacoRef = useRef<EditorProps | null>(null);
-
+  const [lang, setLang] = useState<Lang>('handlebars');
   const handleEditorDidMount = (editor: any, monaco: Monaco) => {
     monacoRef.current = editor;
     editor.addAction({
       id: 'format-document',
       label: 'Format Document',
-      keybindings: [
-        monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF
-      ],
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF],
       run: function (editor: any) {
         const model = editor.getModel();
         const fullRange = model.getFullModelRange();
         const formattedValue = formatDocument(model.getValue());
-        editor.executeEdits("format-document", [
+        editor.executeEdits('format-document', [
           {
             range: fullRange,
             text: formattedValue,
             forceMoveMarkers: true,
-          }
+          },
         ]);
-      }
+      },
     });
 
-    const actionsFormat: any = Array.from((monacoRef as any).current["_actions"])?.find((a: any) => a[0] === 'editor.action.formatDocument');
+    const actionsFormat: any = Array.from(
+      (monacoRef as any).current['_actions']
+    )?.find((a: any) => a[0] === 'editor.action.formatDocument');
     if (actionsFormat) {
       actionsFormat[1]._run();
     }
   };
   function formatDocument(value: string) {
     // Call your preferred formatting logic, e.g., using Prettier
-    console.log("prettier.getSupportInfo()", prettier.getSupportInfo());
     return prettier.format(value, {
-
+      plugins: [parserBabel],
       tabWidth: 2,
       useTabs: false,
       singleQuote: false,
       printWidth: 80,
-      embeddedLanguageFormatting: "auto",
+      embeddedLanguageFormatting: 'auto',
     });
   }
 
@@ -276,39 +276,57 @@ const Panel: React.FC = () => {
             insertText: 'format("")',
           },
         ];
-
         return { suggestions: suggestions };
-      }
+      },
     });
-
   };
 
   const options: EditorProps['options'] = {
     formatOnPaste: true,
     formatOnType: true,
-    suggestSelection: "recentlyUsedByPrefix",
+    suggestSelection: 'recentlyUsedByPrefix',
     wordBasedSuggestions: 'currentDocument',
     minimap: {
-      enabled: false
+      enabled: false,
     },
     quickSuggestions: true,
     parameterHints: {
       enabled: true,
-      cycle: true
+      cycle: true,
     },
-  }
-
-  return <Editor height="100vh" className='container' defaultLanguage="handlebars" theme='vs-dark'
-    beforeMount={handleEditorWillMount}
-    onMount={handleEditorDidMount}
-    options={options}
-    onChange={(value, event) => {
-      const actionsFormat: any = Array.from((monacoRef as any).current["_actions"])?.find((a: any) => a[0] === 'editor.action.formatDocument');
-      if (actionsFormat) {
-        actionsFormat[1]._run();
-      }
-    }}
-  />;
+    snippetSuggestions: 'inline',
+  };
+  console.log('lang', lang);
+  return (
+    <div>
+      <select
+        className="select-lang"
+        onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+          setLang(e.target.value as Lang)
+        }
+      >
+        <option value="handlebars">Handlebars</option>
+        <option value="javascript">JavaScript</option>
+      </select>
+      <Editor
+        height="100vh"
+        className="container"
+        language={lang}
+        theme="vs-dark"
+        beforeMount={handleEditorWillMount}
+        onMount={handleEditorDidMount}
+        options={options}
+        onChange={(value, event) => {
+          const actionsFormat: any = Array.from(
+            (monacoRef as any).current['_actions']
+          )?.find((a: any) => a[0] === 'editor.action.formatDocument');
+          if (actionsFormat) {
+            actionsFormat[1]._run();
+          }
+        }}
+      />
+    </div>
+  );
 };
 
 export default Panel;
