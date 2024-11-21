@@ -7,7 +7,7 @@ import DropdownSettings, { DropDownItem } from './dropdown';
 import styles from './panel.module.scss';
 import { suggestions } from './suggestions';
 import ButtonTheme, { ThemeType } from './theme';
-import { getConfig } from './utils';
+import { getConfig, saveConfig } from './utils';
 
 loader.config({ paths: { vs: '/monaco-editor/vs' } });
 const monacoLanguages: DropDownItem[] = [
@@ -31,12 +31,12 @@ const Panel: React.FC = () => {
   const [language, setLanguage] = useState<DropDownItem>(monacoLanguages[0]);
   const [theme, setTheme] = useState<ThemeType>('vs-dark');
 
-  const saveConfig = async () => {
+  const saveData = async () => {
     if (!chrome.storage?.sync) {
       return;
     }
     try {
-      await chrome.storage.sync.set({ jira_smart_values: currentText });
+      await saveConfig('jira_smart_values', currentText);
       message.success('Saved');
     } catch (error) {
       console.error(error);
@@ -45,7 +45,7 @@ const Panel: React.FC = () => {
 
   const getInitData = async (editor: any) => {
     const result: any = await getConfig('jira_smart_values');
-    const text = result?.jira_smart_values || '';
+    const text = result || '';
     editor?.setValue(text);
   };
 
@@ -129,7 +129,7 @@ const Panel: React.FC = () => {
         <div className={headerClass}>
           <ButtonTheme onThemChange={setTheme} />
           <DropdownSettings
-            onButtonSaveClick={saveConfig}
+            onButtonSaveClick={saveData}
             langs={monacoLanguages}
             langSelected={language.value}
             onLangSelected={(langKey) =>
