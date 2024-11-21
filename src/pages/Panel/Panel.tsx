@@ -141,9 +141,8 @@ const Panel: React.FC = () => {
           />
         </div>
         <Editor
+          height={'calc(100vh - 52px)'}
           onChange={(value) => setCurrentText(value || '')}
-          height="100vh"
-          className="container"
           language={language.value}
           theme={theme}
           beforeMount={handleEditorWillMount}
