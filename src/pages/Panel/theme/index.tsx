@@ -5,15 +5,13 @@ import styles from './theme.module.scss';
 export type ThemeType = 'light' | 'vs-dark';
 type ButtonThemeProps = {
   onThemChange: (theme: ThemeType) => void;
+  theme: ThemeType;
 };
 
-const ButtonTheme = ({ onThemChange }: ButtonThemeProps) => {
-  const [theme, setTheme] = useState<ThemeType>('vs-dark');
-
+const ButtonTheme = ({ onThemChange, theme }: ButtonThemeProps) => {
   const getTheme = async () => {
     const defaultTheme = await getConfig<string>('jira_smart_value_theme');
-    setTheme((defaultTheme as ThemeType) || 'vs-dark');
-    onThemChange(defaultTheme as ThemeType);
+    onThemChange((defaultTheme as ThemeType) || 'vs-dark');
   };
 
   useEffect(() => {
@@ -24,7 +22,6 @@ const ButtonTheme = ({ onThemChange }: ButtonThemeProps) => {
 
   const onChangeTheme = async (e: ChangeEvent<HTMLInputElement>) => {
     const newTheme = e.target.checked ? 'light' : 'vs-dark';
-    setTheme(newTheme);
     onThemChange(newTheme);
     await saveConfig('jira_smart_value_theme', newTheme);
   };

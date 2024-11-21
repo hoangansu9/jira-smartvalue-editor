@@ -127,7 +127,7 @@ const Panel: React.FC = () => {
     <ConfigProvider theme={algorithm}>
       <div>
         <div className={headerClass}>
-          <ButtonTheme onThemChange={setTheme} />
+          <ButtonTheme theme={theme} onThemChange={setTheme} />
           <DropdownSettings
             onButtonSaveClick={saveData}
             langs={monacoLanguages}
