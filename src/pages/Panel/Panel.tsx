@@ -1,57 +1,69 @@
 import Editor, { EditorProps, Monaco, loader } from '@monaco-editor/react';
-import * as editorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js';
-import * as cssWorker from 'monaco-editor/esm/vs/language/css/css.worker.js';
-import * as htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker.js';
-import * as jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker.js';
-import * as tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker.js';
-import React, { ChangeEvent, useRef, useState } from 'react';
-
-import * as parserBabel from 'prettier/parser-babel';
-import * as prettier from 'prettier/standalone';
-import './Panel.scss';
+import { ConfigProvider, theme as antTheme, message } from 'antd';
+import classNames from 'classnames';
+import { editor } from 'monaco-editor';
+import React, { useRef, useState } from 'react';
+import DropdownSettings, { DropDownItem } from './dropdown';
+import styles from './panel.module.scss';
 import { suggestions } from './suggestions';
+import ButtonTheme, { ThemeType } from './theme';
+import { getConfig } from './utils';
 
-// eslint-disable-next-line no-restricted-globals
-self.MonacoEnvironment = {
-  getWorker(_: any, label: string) {
-    if (label === 'json') {
-      return new jsonWorker();
-    }
-    if (label === 'css' || label === 'scss' || label === 'less') {
-      return new cssWorker();
-    }
-    if (label === 'html' || label === 'handlebars' || label === 'razor') {
-      return new htmlWorker();
-    }
-    if (label === 'typescript' || label === 'javascript') {
-      return new tsWorker();
-    }
-    return new editorWorker();
+loader.config({ paths: { vs: '/monaco-editor/vs' } });
+const monacoLanguages: DropDownItem[] = [
+  {
+    label: 'Handlebars',
+    value: 'handlebars',
   },
-};
-// loader.config({ paths: { vs: 'https://www.unpkg.com/monaco-editor/min/vs', } });
-loader.config({ paths: { vs: '/monaco-editor/min/vs' } });
-type Lang = 'handlebars' | 'javascript';
+  {
+    label: 'JSON',
+    value: 'json',
+  },
+  {
+    label: 'JavaScript',
+    value: 'javascript',
+  },
+];
+
 const Panel: React.FC = () => {
-  const monacoRef = useRef<EditorProps | null>(null);
-  const [lang, setLang] = useState<Lang>('handlebars');
-  const handleEditorDidMount = (editor: any, monaco: Monaco) => {
+  const [currentText, setCurrentText] = useState('');
+  const monacoRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const [language, setLanguage] = useState<DropDownItem>(monacoLanguages[0]);
+  const [theme, setTheme] = useState<ThemeType>('vs-dark');
+
+  const saveConfig = async () => {
+    if (!chrome.storage?.sync) {
+      return;
+    }
+    try {
+      await chrome.storage.sync.set({ jira_smart_values: currentText });
+      message.success('Saved');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const getInitData = async (editor: any) => {
+    const result: any = await getConfig('jira_smart_values');
+    const text = result?.jira_smart_values || '';
+    editor?.setValue(text);
+  };
+
+  const handleEditorDidMount = async (editor: any, monaco: Monaco) => {
+    await getInitData(editor);
+    if (!editor || !editor?.current) {
+      return;
+    }
     monacoRef.current = editor;
+
     editor.addAction({
       id: 'format-document',
       label: 'Format Document',
+      contextMenuOrder: 2,
+      contextMenuGroupId: '1_modification',
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF],
       run: function (editor: any) {
-        const model = editor.getModel();
-        const fullRange = model.getFullModelRange();
-        const formattedValue = formatDocument(model.getValue());
-        editor.executeEdits('format-document', [
-          {
-            range: fullRange,
-            text: formattedValue,
-            forceMoveMarkers: true,
-          },
-        ]);
+        editor.getAction('editor.action.formatDocument')?.run();
       },
     });
 
@@ -62,77 +74,84 @@ const Panel: React.FC = () => {
       actionsFormat[1]._run();
     }
   };
-  function formatDocument(value: string) {
-    // Call your preferred formatting logic, e.g., using Prettier
-    return prettier.format(value, {
-      plugins: [parserBabel],
-      tabWidth: 2,
-      useTabs: false,
-      singleQuote: false,
-      printWidth: 80,
-      embeddedLanguageFormatting: 'auto',
-    });
-  }
 
   const handleEditorWillMount = (monaco: any) => {
-    monaco.languages.registerCompletionItemProvider('handlebars', {
+    const config = {
+      triggerCharacters: ['.', ' '],
       provideCompletionItems: function () {
         const list = suggestions.map((i) => ({
           label: i.name,
-          kind: monaco.languages.CompletionItemKind.Snippet,
+          kind: monaco.languages.CompletionItemKind.Keyword,
           documentation: i.description,
           insertText: i.name,
         }));
         return { suggestions: list };
       },
-    });
+    };
+    monaco.languages.registerCompletionItemProvider('handlebars', config);
+    monaco.languages.registerCompletionItemProvider('json', config);
   };
 
   const options: EditorProps['options'] = {
     formatOnPaste: true,
     formatOnType: true,
-    suggestSelection: 'recentlyUsedByPrefix',
+    wordWrap: 'on',
+    codeActionsOnSaveTimeout: 500,
+    suggestSelection: 'first',
     wordBasedSuggestions: 'currentDocument',
     minimap: {
       enabled: false,
     },
-    quickSuggestions: true,
-    parameterHints: {
-      enabled: true,
-      cycle: true,
-    },
-    snippetSuggestions: 'inline',
+    acceptSuggestionOnEnter: 'off',
   };
-  console.log('lang', lang);
+
+  const headerClass = classNames(styles.header, {
+    [styles.dark]: theme === 'vs-dark',
+    [styles.light]: theme === 'light',
+  });
+
+  const darkThemeToken = {
+    algorithm: antTheme.darkAlgorithm,
+    token: {
+      colorBgContainer: '#1e1e1e',
+      borderRadius: 3,
+    },
+  };
+  const lightThemeToken = {
+    algorithm: antTheme.defaultAlgorithm,
+    token: { borderRadius: 3 },
+  };
+
+  const algorithm = theme === 'vs-dark' ? darkThemeToken : lightThemeToken;
   return (
-    <div>
-      <select
-        className="select-lang"
-        onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-          setLang(e.target.value as Lang)
-        }
-      >
-        <option value="handlebars">Handlebars</option>
-        <option value="javascript">JavaScript</option>
-      </select>
-      <Editor
-        height="100vh"
-        className="container"
-        language={lang}
-        theme="vs-dark"
-        beforeMount={handleEditorWillMount}
-        onMount={handleEditorDidMount}
-        options={options}
-        onChange={(value, event) => {
-          const actionsFormat: any = Array.from(
-            (monacoRef as any).current['_actions']
-          )?.find((a: any) => a[0] === 'editor.action.formatDocument');
-          if (actionsFormat) {
-            actionsFormat[1]._run();
-          }
-        }}
-      />
-    </div>
+    <ConfigProvider theme={algorithm}>
+      <div>
+        <div className={headerClass}>
+          <ButtonTheme onThemChange={setTheme} />
+          <DropdownSettings
+            onButtonSaveClick={saveConfig}
+            langs={monacoLanguages}
+            langSelected={language.value}
+            onLangSelected={(langKey) =>
+              setLanguage(
+                monacoLanguages.find((l) => l.value === langKey) ||
+                  monacoLanguages[0]
+              )
+            }
+          />
+        </div>
+        <Editor
+          onChange={(value) => setCurrentText(value || '')}
+          height="100vh"
+          className="container"
+          language={language.value}
+          theme={theme}
+          beforeMount={handleEditorWillMount}
+          onMount={handleEditorDidMount}
+          options={options}
+        />
+      </div>
+    </ConfigProvider>
   );
 };
 

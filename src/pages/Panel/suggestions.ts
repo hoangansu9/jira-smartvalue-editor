@@ -1438,4 +1438,8 @@ export const suggestions = [
     name: 'lastBusinessDayOfMonth',
     description: 'Gets the last business day of the current month.',
   },
+  {
+    name: 'jsonStringToObject',
+    description: 'Converts a JSON string into an object.',
+  },
 ];

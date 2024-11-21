@@ -1,4 +1,3 @@
-
 var webpack = require('webpack'),
   path = require('path'),
   fileSystem = require('fs-extra'),
@@ -35,20 +34,20 @@ if (fileSystem.existsSync(secretsPath)) {
 }
 
 const isDevelopment = process.env.NODE_ENV !== 'production';
-console.log("process.env.NODE_ENV", process.env.NODE_ENV);
+console.log('process.env.NODE_ENV', process.env.NODE_ENV);
 var options = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
     newtab: path.join(__dirname, 'src', 'pages', 'Newtab', 'index.jsx'),
-    options: path.join(__dirname, 'src', 'pages', 'Options', 'index.jsx'),
-    popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
+    // options: path.join(__dirname, 'src', 'pages', 'Options', 'index.jsx'),
+    // popup: path.join(__dirname, 'src', 'pages', 'Popup', 'index.jsx'),
     background: path.join(__dirname, 'src', 'pages', 'Background', 'index.js'),
-    contentScript: path.join(__dirname, 'src', 'pages', 'Content', 'index.js'),
+    storage: path.join(__dirname, 'src', 'pages', 'Storage', 'index.ts'),
     devtools: path.join(__dirname, 'src', 'pages', 'Devtools', 'index.js'),
     panel: path.join(__dirname, 'src', 'pages', 'Panel', 'index.jsx'),
   },
-  chromeExtensionBoilerplate: {
-    notHotReload: ['background', 'contentScript', 'devtools'],
+  chromeExtensionSmartValue: {
+    notHotReload: ['background', 'storage', 'devtools'],
   },
   output: {
     filename: '[name].bundle.js',
@@ -208,7 +207,8 @@ var options = {
       filename: 'panel.html',
       chunks: ['panel'],
       cache: false,
-    }), new CopyWebpackPlugin({
+    }),
+    new CopyWebpackPlugin({
       patterns: [
         {
           from: 'src/pages/Panel/monaco-editor',
