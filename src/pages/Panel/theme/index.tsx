@@ -13,6 +13,7 @@ const ButtonTheme = ({ onThemChange }: ButtonThemeProps) => {
   const getTheme = async () => {
     const defaultTheme = await getConfig<string>('jira_smart_value_theme');
     setTheme((defaultTheme as ThemeType) || 'vs-dark');
+    onThemChange(defaultTheme as ThemeType);
   };
 
   useEffect(() => {

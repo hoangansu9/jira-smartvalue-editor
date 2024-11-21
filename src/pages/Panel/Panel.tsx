@@ -102,7 +102,7 @@ const Panel: React.FC = () => {
     minimap: {
       enabled: false,
     },
-    acceptSuggestionOnEnter: 'off',
+    acceptSuggestionOnEnter: 'smart',
   };
 
   const headerClass = classNames(styles.header, {
